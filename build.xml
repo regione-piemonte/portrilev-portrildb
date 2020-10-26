@@ -1,0 +1,160 @@
+<!--
+SPDX-FileCopyrightText: Copyright 2020 | Regione Piemonte
+SPDX-License-Identifier: EUPL-1.2
+-->
+<project name="portrildb" default="default" basedir=".">
+<!--<property name="INSTAL_UNIT" value="${utente_owner}"/> -->
+<property name="temp" value="build/temp/"/>
+<property name="app.src" value="src/"/>
+<property name="app.sql" value="${app.src}/sql/"/>
+<property name="temp.config" value="${temp}config/"/>
+<property name="dist" value="dist/"/>
+<!-- DEFAULT -->
+
+<target name="default" description="Verifica se eseguire il build per un solo environment specificato a linea di commando con -Dtarget=${target} o per tutti gli environment ">
+
+<condition property="first-call" value="distribution">
+
+<not>
+<equals arg1="${target}" arg2="$${target}"/>
+</not>
+</condition>
+
+<condition property="first-call" value="all-target">
+<equals arg1="${target}" arg2="$${target}"/>
+</condition>
+<echo message="target: ${target}"/>
+<echo message="first-call: ${first-call}"/>
+<antcall target="${first-call}"/>
+</target>
+
+<target name="all-target" description="Lancia il build per le varie  distribuzioni in sequenza">
+<!--
+	<antcall target="distribution">
+	<param name="target" value="dev-rp-01"/>
+	</antcall> -->
+
+	<antcall target="distribution">
+	<param name="target" value="tst-rp-01"/>
+	</antcall>
+
+	<antcall target="distribution">
+	<param name="target" value="coll-rp-01"/>
+	</antcall>
+
+	<antcall target="distribution">
+	<param name="target" value="prod-rp-01"/>
+	</antcall>
+</target>
+
+<target name="distribution" depends="init" description="Crea i pacchetti per la distribuzione">
+
+<antcall target="package-all">
+<param name="target" value="${target}"/>
+</antcall>
+</target>
+
+<target name="package-all" depends="init" description="Crea tutti gli archivi">
+<echo message="packaging all for target : ${target}"/>
+
+<antcall target="_package-zip">
+<param name="target" value="${target}"/>
+</antcall>
+</target>
+<!-- INIT TARGET -->
+
+<target name="init" description="Inizializza lo script Ant">
+<tstamp/>
+
+<condition property="target" value="dev-rp-01">
+<equals arg1="${target}" arg2="$${target}"/>
+</condition>
+<echo message=" target: ${target}"/>
+<loadproperties srcFile="buildfiles/${target}.properties"/>
+<loadproperties srcFile="buildfiles/build.properties"/>
+</target>
+<!-- CONFIGURAZIONE -->
+
+<target name="environment-config" depends="init" description="parsifica i modelli dei file di configurazione inserendo al loro interno i dati necessari per ciascun ambiente">
+<antcall target="clean-temp"/>
+<mkdir dir="${temp.config}"/>
+
+<copy todir="${temp.config}">
+
+	<fileset dir="${app.sql}/">
+		<!--<include name="${sqlscript}"/>-->
+		<include name="**/*.sql"/>
+		<!--<exclude name="Creazione*.sql"/>-->
+	</fileset>
+</copy>
+
+
+      
+</target>
+<target name="compile-all">
+   </target>
+
+	<target name="_package-zip" depends="environment-config" 
+		          description="Packages the files">
+		    <mkdir dir="${dist}/${target}" />
+
+	        <antcall target="_utente-zip">
+	          <param name="dbuser" value="${utente}"/>
+	        </antcall>
+	 </target>
+
+
+		<target name="_utente-zip" depends="dir.check" if="dir.exists">
+		  	
+		  	<echo message="Packaging ${dbuser}-${versione}.zip file ..."/>
+		      
+			<delete file="${dist}/${target}/${dbuser}-${versione}.zip" />  
+			  
+		    <zip destfile="${dist}/${target}/${dbuser}-${versione}.zip"
+		       basedir="${temp.config}/incr/${versione}">
+		    </zip>       
+	  </target>
+		
+		<target name="dir.check">
+			    <condition property="dir.exists">
+			      <available file="${temp.config}/incr/${versione}" type="dir"/>
+			    </condition>
+			  </target>	
+	
+	
+	
+	
+	
+<!-- TARGET UTILS -->
+<!-- CLEANS -->
+
+<target name="clean-all" description="cancella tutte le directory">
+<antcall target="clean-dist"/>
+<antcall target="clean-temp"/>
+</target>
+
+<target name="clean-dist" description="cancella la directory cache creata da ivy">
+<delete dir="${dist}"/>
+</target>
+
+<target name="clean-temp" description="cancella la directory cache creata da ivy">
+<delete dir="${temp}"/>
+</target>
+<!-- ABOUT -->
+
+<target name="about" description="Mostra i target interni pubblici">
+<loadfile property="about" srcFile="buildfiles/about.txt"/>
+<echo message=" ${about}"/>
+</target>
+<!-- ABOUT CUSTOM -->
+
+<target name="about-custom" description="Mostra i target interni">
+<loadfile property="about-custom" srcFile="buildfiles/about-custom.txt"/>
+<echo message=" ${about-custom}"/>
+</target>
+<!-- SHOWVAR -->
+
+<target name="show-vars" depends="init" description="Visualizza tutte le variabili impostate nei file di properties e/o da linea di comando">
+
+</target>
+</project>
